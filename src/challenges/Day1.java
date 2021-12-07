@@ -11,13 +11,18 @@ public class Day1 {
         try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             int increases = 0;
             String line;
-            int lastMeasure = Integer.MAX_VALUE;
+
+            int windowSize = 3;
+            int[] window = new int[windowSize + 1];
+            int i = 0;
             while ((line = br.readLine()) != null) {
                 int measure = Integer.parseInt(line);
-                if (measure > lastMeasure)
-                    increases++;
 
-                lastMeasure = measure;
+                shiftWindow(window, measure);
+                if (i >= windowSize && isIncrease(window))
+                    increases += 1;
+
+                i++;
             }
 
             System.out.println(increases);
@@ -26,5 +31,16 @@ public class Day1 {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private static void shiftWindow(int[] window, int newMeasure) {
+        window[0] = window[1];
+        window[1] = window[2];
+        window[2] = window[3];
+        window[3] = newMeasure;
+    }
+
+    private static boolean isIncrease(int[] window) {
+        return window[0] + window[1] + window[2] < window[1] + window[2] + window[3];
     }
 }
