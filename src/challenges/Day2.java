@@ -27,15 +27,16 @@ public class Day2 {
 
     private static void updatePosition(Position position, Command command) {
         switch (command.direction) {
-            case forward -> position.horizontal += command.units;
-            case down -> position.depth += command.units;
-            case up -> position.depth -= command.units;
+            case forward -> { position.horizontal += command.units; position.depth += (position.aim * command.units); }
+            case down -> position.aim += command.units;
+            case up -> position.aim -= command.units;
         }
     }
 
     public static class Position {
         int horizontal;
         int depth;
+        int aim;
     }
 
     public enum Direction {
