@@ -43,11 +43,15 @@ public class Day4 {
     }
 
     private static int runBingo(String[] valuesToCall, List<BingoBoard> boards) {
+        HashSet<BingoBoard> boardsWithBingo = new HashSet<>();
+
         for (String value : valuesToCall) {
             for (BingoBoard board : boards) {
                 board.markSpot(value);
 
-                if (board.hasBingo())
+                if (board.hasBingo() && !boardsWithBingo.contains(board) && boardsWithBingo.size() != boards.size() - 1)
+                    boardsWithBingo.add(board);
+                else if (board.hasBingo() && !boardsWithBingo.contains(board) && boardsWithBingo.size() == boards.size() - 1)
                     return board.getBingoScore(Integer.parseInt(value));
             }
         }
