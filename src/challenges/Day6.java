@@ -4,9 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashMap;
 
 public class Day6 {
     public static void main(String[] args) {
@@ -25,55 +24,44 @@ public class Day6 {
             e.printStackTrace();
         }
 
-        List<Lanternfish> lanternfish = createInitialLanternfish(initialTimers);
-        passTime(lanternfish, 80);
+        HashMap<Integer, Long> lanternfish = createInitialLanternfish(initialTimers);
+        passTime(lanternfish, 256);
 
-        System.out.println(lanternfish.size());
+        System.out.println(getFishCount(lanternfish));
     }
 
-    private static List<Lanternfish> createInitialLanternfish(int[] initialTimers) {
-        List<Lanternfish> lanternfish = new ArrayList<>();
+    private static HashMap<Integer, Long> createInitialLanternfish(int[] initialTimers) {
+        HashMap<Integer, Long> lanternfish = new HashMap<>();
+        for (int i = 0; i < 9; i++) {
+            lanternfish.put(i, (long)0);
+        }
 
         for (int timer : initialTimers) {
-            lanternfish.add(new Lanternfish(timer));
+            long current = lanternfish.get(timer);
+            lanternfish.put(timer, current + 1);
         }
 
         return lanternfish;
     }
 
-    private static void passTime(List<Lanternfish> lanternfish, int daysToPass) {
+    private static void passTime(HashMap<Integer, Long> lanternfish, int daysToPass) {
         for (int i = 0; i < daysToPass; i++) {
-            List<Lanternfish> newFishForDay = new ArrayList<>();
-            for (Lanternfish fish : lanternfish) {
-                if (fish.newDay())
-                    newFishForDay.add(new Lanternfish());
+            long newFishForDay = lanternfish.get(0);
+
+            for (int j = 1; j < 9; j++) {
+                lanternfish.put(j - 1, lanternfish.get(j));
             }
 
-            lanternfish.addAll(newFishForDay);
+            lanternfish.put(6, lanternfish.get(6) + newFishForDay); // parents
+            lanternfish.put(8, newFishForDay); // babies
         }
     }
-}
 
-class Lanternfish {
-    private int timerToOffspring;
-    public int getTimerToOffspring() { return timerToOffspring; };
+    private static long getFishCount(HashMap<Integer, Long> lanternfish) {
+        long total = 0;
+        for (int i : lanternfish.keySet())
+            total += lanternfish.get(i);
 
-    // returns whether the Lanternfish reproduces on the new day
-    public boolean newDay() {
-        if (timerToOffspring == 0) {
-            timerToOffspring = 6;
-            return true;
-        }
-
-        timerToOffspring--;
-        return false;
-    }
-
-    public Lanternfish() {
-        timerToOffspring = 8;
-    }
-
-    public Lanternfish(int timer) {
-        timerToOffspring = timer;
+        return total;
     }
 }
