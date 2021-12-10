@@ -57,6 +57,22 @@ public class Day5 {
                 path.add(new Coordinate(i, vent.getStart().getY()));
             }
         }
+        else {
+            boolean xIncreasing = vent.getStart().getX() < vent.getEnd().getX();
+            boolean yIncreasing = vent.getStart().getY() < vent.getEnd().getY();
+            int ventLength = Math.abs(vent.getStart().getX() - vent.getEnd().getX());
+
+            for (int i = 0; i <= ventLength; i++) {
+                int xCoord = xIncreasing
+                    ? vent.getStart().getX() + i
+                    : vent.getStart().getX() - i;
+                int yCoord = yIncreasing
+                        ? vent.getStart().getY() + i
+                        : vent.getStart().getY() - i;
+
+                path.add(new Coordinate(xCoord, yCoord));
+            }
+        }
 
         return path;
     }
