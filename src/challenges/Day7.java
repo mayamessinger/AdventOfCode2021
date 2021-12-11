@@ -47,7 +47,10 @@ public class Day7 {
     }
 
     private static int getMovementCost(int[][] movementCosts, int crabPosition, int position) {
-        CostCalculator calculator = (pos1, pos2) -> Math.abs(pos1 - pos2);
+        CostCalculator calculator = (pos1, pos2) -> {
+            int distance = Math.abs(pos1 - pos2);
+            return (distance * distance + distance) / 2;
+        };
         if (movementCosts[crabPosition][position] == 0)
             movementCosts[crabPosition][position] = calculator.calculateCost(crabPosition, position);
 
