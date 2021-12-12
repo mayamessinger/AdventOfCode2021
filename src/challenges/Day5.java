@@ -121,8 +121,12 @@ class Coordinate {
     // matching values as the same. And defining a way to check object equivalence took super long.
     // Instead, we use prime numbers to try to make any Coordinate object have a unique key, and use that as a key for
     // the map
-    public int uniqueHash() {
+    public int hashCode() {
         return x * 7919 + y * 5897;
+    }
+
+    public boolean equals(Object other) {
+        return other instanceof Coordinate && x == ((Coordinate)other).getX() && y == ((Coordinate)other).getY();
     }
 
     public Coordinate(int x, int y) {
@@ -136,10 +140,10 @@ class GridOfVents {
     public HashMap<Integer, Integer> getCoordinateCoverage() { return coordinateCoverage; }
 
     public void addToMap(Coordinate coordinate) {
-        if (coordinateCoverage.keySet().contains(coordinate.uniqueHash()))
-            coordinateCoverage.put(coordinate.uniqueHash(), coordinateCoverage.get(coordinate.uniqueHash()) + 1);
+        if (coordinateCoverage.keySet().contains(coordinate.hashCode()))
+            coordinateCoverage.put(coordinate.hashCode(), coordinateCoverage.get(coordinate.hashCode()) + 1);
         else
-            coordinateCoverage.put(coordinate.uniqueHash(), 1);
+            coordinateCoverage.put(coordinate.hashCode(), 1);
     };
 
     public GridOfVents() {
