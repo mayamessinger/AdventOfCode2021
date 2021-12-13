@@ -15,7 +15,8 @@ public class Day11 {
     public static void main(String[] args) {
         int[][] octopi = readFile();
 
-        System.out.println(octopiFlashesAfterXDays(octopi, 100));
+        // System.out.println(octopiFlashesAfterXDays(octopi, 100));
+        System.out.println(dayOfSimultaneousFlash(octopi));
     }
 
     private static int[][] readFile() {
@@ -55,6 +56,21 @@ public class Day11 {
             flashCount += step(octopi);
 
         return flashCount;
+    }
+
+    private static int dayOfSimultaneousFlash(int[][] octopi) {
+        int dayOfSimultaneousFlash = -1;
+
+        int stepNumber = 0;
+        while (dayOfSimultaneousFlash == -1) {
+            stepNumber++;
+
+            int numFlashesInStep = step(octopi);
+            if (numFlashesInStep == octopi.length * octopi[0].length)
+                dayOfSimultaneousFlash = stepNumber;
+        }
+
+        return dayOfSimultaneousFlash;
     }
 
     private static int step(int[][] octopi) {
