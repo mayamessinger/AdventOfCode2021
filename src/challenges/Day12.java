@@ -68,14 +68,38 @@ public class Day12 {
             newPath.add(connectedCave);
             pathsForNode.add(newPath);
 
-            if (connectedCave.equals("end")) {
+            if (connectedCave.equals("start") || connectedCave.equals("end")) {
                 continue;
             }
 
-            if (!path.contains(connectedCave) || !caveIsSmall(connectedCave))
+            if (!caveIsSmall(connectedCave) || canVisitSmallCave(path, connectedCave))
                 pathsForNode.addAll(pursuePath(caves, newPath));
         }
 
         return pathsForNode;
+    }
+
+    private static boolean canVisitSmallCave(List<String> path, String cave) {
+        Map<String, Integer> visitedCounts = new HashMap<>();
+
+        for (String visitedCave : path) {
+            visitedCounts.put(visitedCave, Collections.frequency(path, visitedCave));
+        }
+
+        return !hasVisitedAnySmallCaveTwice(visitedCounts)
+            || hasVisitedThisCaveAtMostOnce(visitedCounts, cave);
+    }
+
+    private static boolean hasVisitedAnySmallCaveTwice(Map<String, Integer> visitedCounts) {
+        for (String cave : visitedCounts.keySet())
+            if (caveIsSmall(cave) && visitedCounts.get(cave) == 2)
+                return true;
+
+        return false;
+    }
+
+    private static boolean hasVisitedThisCaveAtMostOnce(Map<String, Integer> visitedCounts, String currentCave) {
+        return visitedCounts.get(currentCave) == null
+            || visitedCounts.get(currentCave) < 1;
     }
 }
