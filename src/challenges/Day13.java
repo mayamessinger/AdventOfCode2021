@@ -5,6 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -13,7 +15,8 @@ public class Day13 {
     public static void main(String[] args) {
         PageOne page = readFile();
 
-        System.out.println(getNumberDotsAfterOneFold(page));
+        // System.out.println(getNumberDotsAfterOneFold(page));
+        displayPaperAfterAllFolds(page);
     }
 
     private static PageOne readFile() {
@@ -58,6 +61,38 @@ public class Day13 {
         doFold(page.getDots(), page.getFolds().get(1));
 
         return page.getDots().size();
+    }
+
+    private static void displayPaperAfterAllFolds(PageOne page) {
+        for (Fold fold : page.getFolds())
+            doFold(page.getDots(), fold);
+
+        printPaperAsArray(page.getDots());
+    }
+
+    // x and y are reversed for display because the problem switched the normal axes but my brain can't handle that
+    private static void printPaperAsArray(Set<Coordinate> dots) {
+        int finalXSize = getMaxX(dots);
+        int finalYSize = getMaxY(dots);
+        char[][] arrayToPrint = new char[finalYSize][finalXSize];
+        for (char[] row : arrayToPrint)
+            Arrays.fill(row, '.');
+
+        for (Coordinate dot : dots) {
+            arrayToPrint[dot.getY()][dot.getX()] = '#';
+        }
+
+        for (char[] line : arrayToPrint) {
+            System.out.println(line);
+        }
+    }
+
+    private static int getMaxX(Set<Coordinate> dots) {
+        return Collections.max(dots.stream().map(d -> d.getX()).toList()) + 1;
+    }
+
+    private static int getMaxY(Set<Coordinate> dots) {
+        return Collections.max(dots.stream().map(d -> d.getY()).toList()) + 1;
     }
 
     private static void doFold(Set<Coordinate> dots, Fold fold) {
