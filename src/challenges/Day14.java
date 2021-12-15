@@ -4,19 +4,24 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class Day14 {
     public static void main(String[] args) {
         PolymerProcess polymers = readFile();
 
-        runProcess(polymers, 10);
+        Map<Character, Long> frequencies = runProcess(polymers, 40);
 
-        System.out.println(mostCommonMinusLeastCommon(polymers.getHead()));
+        System.out.println(mostCommonMinusLeastCommon(frequencies));
     }
 
     private static PolymerProcess readFile() {
-        LinkedListNode polymerHead = null;
+        Map<String, Long> pairFrequencies = new HashMap<>();
+        Map<Character, Long> letterFrequencies = new HashMap<>();
         Set<InsertionRule> rules = new HashSet<>();
 
         String fileName = "resources/day14.txt";
@@ -26,19 +31,11 @@ public class Day14 {
                 if (line.isBlank())
                     continue;
 
-                if (polymerHead == null) {
-                    LinkedListNode lastNode = null;
-
-                    char[] polymers = line.toCharArray();
-                    for (char polymer : polymers) {
-                        LinkedListNode newNode = new LinkedListNode(polymer);
-
-                        if (polymerHead == null)
-                            polymerHead = newNode;
-                        else
-                            lastNode.setNext(newNode);
-
-                        lastNode = newNode;
+                if (pairFrequencies.isEmpty()) {
+                    for (int i = 0; i < line.length(); i++) {
+                        if (i < line.length() - 1)
+                            addOrUpdateFrequencies(pairFrequencies, line.substring(i, i + 2), (long)1);
+                        addOrUpdateFrequencies(letterFrequencies, line.charAt(i), (long)1);
                     }
 
                     continue;
@@ -52,127 +49,93 @@ public class Day14 {
             e.printStackTrace();
         }
 
-        return new PolymerProcess(polymerHead, rules);
+        return new PolymerProcess(pairFrequencies, letterFrequencies, rules);
     }
 
     private static InsertionRule parseInsertionRule(String line) {
         String[] lineSplit = line.split(" -> ");
-        char firstElem = lineSplit[0].charAt(0);
-        char secondElem = lineSplit[0].charAt(1);
-        char toInsert = lineSplit[1].charAt(0);
 
-        return new InsertionRule(firstElem, secondElem, toInsert);
+        return new InsertionRule(lineSplit[0], lineSplit[1].charAt(0));
     }
 
-    private static <T> Map<T, Integer> getListOccurrences(LinkedListNode<T> polymerHead) {
-        Map<T, Integer> occurrences = new HashMap<>();
-
-        LinkedListNode<T> currentNode = polymerHead;
-        while (currentNode != null) {
-            T value = currentNode.getValue();
-            if (occurrences.get(value) == null)
-                occurrences.put(value, 1);
-            else
-                occurrences.put(value, occurrences.get(value) + 1);
-
-            currentNode = currentNode.getNext();
-        }
-
-        return occurrences;
+    private static <T> void addOrUpdateFrequencies(Map<T, Long> frequencies, T keyToUpdate, Long amount) {
+        if (frequencies.get(keyToUpdate) == null)
+            frequencies.put(keyToUpdate, amount);
+        else
+            frequencies.put(keyToUpdate, tryGetMapValue(frequencies, keyToUpdate, 0) + amount);
     }
 
-    private static void runProcess(PolymerProcess polymers, int numSteps) {
+    private static void subtractFrequencies(Map<String, Long> frequencies, String keyToUpdate, Long amount) {
+        frequencies.put(keyToUpdate, tryGetMapValue(frequencies, keyToUpdate, 0) - amount);
+    }
+
+    private static Map<Character, Long> runProcess(PolymerProcess polymers, int numSteps) {
+        Map<String, Long> pairingFrequencies = polymers.getPairingFrequencies();
+        Map<Character, Long> letterFrequencies = polymers.getLetterFrequencies();
+
         for (int i = 0; i < numSteps; i++) {
-            LinkedListNode<Character> currentNode = polymers.getHead();
-            while (currentNode.hasNext()) {
-                LinkedListNode nextNode = currentNode.getNext();
-                insertPolymerIfNecessary(polymers.getInsertionRules(), currentNode, nextNode);
+            Map<String, Long> newPairingFrequencies = new HashMap<>(pairingFrequencies);
+            Map<Character, Long> newLetterFrequencies = new HashMap<>(letterFrequencies);
 
-                currentNode = nextNode;
+            for (InsertionRule rule : polymers.getInsertionRules()) {
+                long rulePairOccurrences = tryGetMapValue(pairingFrequencies, rule.getPolymerPair(), 0);
+
+                addOrUpdateFrequencies(newPairingFrequencies, rule.getFirstNewKey(), rulePairOccurrences);
+                addOrUpdateFrequencies(newPairingFrequencies, rule.getSecondNewKey(), rulePairOccurrences);
+                addOrUpdateFrequencies(newLetterFrequencies, rule.getCharacterToInsert(), rulePairOccurrences);
+                subtractFrequencies(newPairingFrequencies, rule.getPolymerPair(), rulePairOccurrences);
             }
+
+            pairingFrequencies = newPairingFrequencies;
+            letterFrequencies = newLetterFrequencies;
         }
+
+        return letterFrequencies;
     }
 
-    private static void insertPolymerIfNecessary(Set<InsertionRule> insertionRules,
-        LinkedListNode<Character> currentNode, LinkedListNode<Character> nextNode
-    ) {
-        InsertionRule ruleThatApplies = getInsertionRuleForNodes(insertionRules, currentNode.getValue(),
-            nextNode.getValue());
-        if (ruleThatApplies != null) {
-            insertPolymer(currentNode, nextNode, ruleThatApplies.getCharacterToInsert());
-        }
+    private static <T> long tryGetMapValue(Map<T, Long> map, T key, long fallback) {
+        Long value = map.get(key);
+        if (value == null)
+            return fallback;
+
+        return value;
     }
 
-    private static <T> void insertPolymer(LinkedListNode<T> firstNode, LinkedListNode<T> secondNode, T newPolymer) {
-        LinkedListNode<T> newNode = new LinkedListNode<T>(newPolymer, secondNode);
-        firstNode.setNext(newNode);
-    }
-
-    private static InsertionRule getInsertionRuleForNodes(Set<InsertionRule> rules, char currentValue, char nextValue) {
-        return rules.stream().filter(r -> r.getFirstElement() == currentValue && r.getSecondElement() == nextValue)
-            .toList().get(0);
-    }
-
-    private static <T> int mostCommonMinusLeastCommon(LinkedListNode<T> head) {
-        Map<T, Integer> frequencies = getListOccurrences(head);
+    private static <T> long mostCommonMinusLeastCommon(Map<T, Long> frequencies) {
         return Collections.max(frequencies.values()) - Collections.min(frequencies.values());
-    }
-
-    private static <T> void printAllPolymers(LinkedListNode<T> head) {
-        LinkedListNode<T> currentNode = head;
-        while (currentNode != null) {
-            System.out.print(currentNode.getValue());
-            currentNode = currentNode.getNext();
-        }
-    }
-}
-
-class LinkedListNode<T> {
-    private T value;
-    public T getValue() { return value; }
-
-    private LinkedListNode next;
-    public LinkedListNode getNext() { return next; }
-    public void setNext(LinkedListNode next) { this.next = next; }
-    public boolean hasNext() { return next != null; }
-
-    public LinkedListNode(T value) {
-        this.value = value;
-        this.next = null;
-    }
-
-    public LinkedListNode(T value, LinkedListNode next) {
-        this.value = value;
-        this.next = next;
     }
 }
 
 class PolymerProcess {
-    private LinkedListNode head;
-    public LinkedListNode getHead() { return head; }
+    private Map<String, Long> pairingFrequencies;
+    public Map<String, Long> getPairingFrequencies() { return pairingFrequencies; }
+
+    private Map<Character, Long> letterFrequencies;
+    public Map<Character, Long> getLetterFrequencies() { return letterFrequencies; }
 
     private Set<InsertionRule> insertionRules;
     public Set<InsertionRule> getInsertionRules() { return insertionRules; }
 
-    public PolymerProcess(LinkedListNode head, Set<InsertionRule> rules) {
-        this.head = head;
+    public PolymerProcess(Map<String, Long> pairFreqs, Map<Character, Long> letterFreqs, Set<InsertionRule> rules) {
+        this.pairingFrequencies = pairFreqs;
+        this.letterFrequencies = letterFreqs;
         this.insertionRules = rules;
     }
 }
 
 class InsertionRule {
-    private char firstElement;
-    public char getFirstElement() { return firstElement; }
+    private String polymerPair;
+    public String getPolymerPair() { return polymerPair; }
 
-    private char secondElement;
-    public char getSecondElement() { return secondElement; }
+    public String getFirstNewKey() { return polymerPair.charAt(0) + String.valueOf(toInsert); }
+
+    public String getSecondNewKey() { return String.valueOf(toInsert) + polymerPair.charAt(1); }
 
     private char toInsert;
     public char getCharacterToInsert() { return toInsert; }
 
-    public InsertionRule(char firstElem, char secondElem, char toInsert) {
-        this.firstElement = firstElem;
-        this.secondElement = secondElem;
+    public InsertionRule(String polymerPair, char toInsert) {
+        this.polymerPair = polymerPair;
         this.toInsert = toInsert;
     }
 }
