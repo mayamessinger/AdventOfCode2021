@@ -11,12 +11,12 @@ import java.util.Queue;
 
 public class Day16 {
     public static void main(String[] args) {
-        List<Packet> packets = readFile();
+        Packet packet = readFile();
 
-        System.out.println(packets.stream().mapToInt(p -> p.header.version).sum());
+        System.out.println(packet.getValue());
     }
 
-    private static List<Packet> readFile() {
+    private static Packet readFile() {
         char[] chars = null;
 
         String fileName = "resources/day16.txt";
@@ -39,11 +39,11 @@ public class Day16 {
             binaryQueue.add(paddedBinary.replace(" ", "0"));
         }
 
-        return convertBinaryToPackets(binaryQueue);
+        return convertBinaryToPacket(binaryQueue);
     }
 
-    private static List<Packet> convertBinaryToPackets(Queue<String> fourBitBinaryStrings) {
-        return convertBinaryToPackets(fourBitBinaryStrings, new ArrayDeque<>(), LimitType.none, -1);
+    private static Packet convertBinaryToPacket(Queue<String> fourBitBinaryStrings) {
+        return convertBinaryToPackets(fourBitBinaryStrings, new ArrayDeque<>(), LimitType.none, -1).get(0);
     }
 
     private static List<Packet> convertBinaryToPackets(Queue<String> fourBitBinaryStrings,
@@ -136,17 +136,19 @@ public class Day16 {
 
             if (lengthTypeId == '0') {
                 int subPacketLengths = Integer.parseInt(getPacketSection(fourBitBinaryStrings, packetBinary, 15),
-                        2);
+                    2);
 
-                packetsForHeader.add(new Packet(header)); // this packet
-                packetsForHeader.addAll(convertBinaryToPackets(fourBitBinaryStrings, packetBinary,
-                    LimitType.bitLength, subPacketLengths));
+                List<Packet> subpackets = convertBinaryToPackets(fourBitBinaryStrings, packetBinary,
+                    LimitType.bitLength, subPacketLengths);
+                var packet = new Packet(header, getPacketValue(header.getType(), subpackets), subpackets);
+                packetsForHeader.add(packet); // add parent packet last, to easily access
             }
             if (lengthTypeId == '1') {
-                packetsForHeader.add(new Packet(header)); // this packet
                 int numSubPackets = Integer.parseInt(getPacketSection(fourBitBinaryStrings, packetBinary, 11), 2);
-                packetsForHeader.addAll(convertBinaryToPackets(fourBitBinaryStrings, packetBinary,
-                    LimitType.packetCount, numSubPackets));
+                List<Packet> subpackets = convertBinaryToPackets(fourBitBinaryStrings, packetBinary,
+                    LimitType.packetCount, numSubPackets);
+                var packet = new Packet(header, getPacketValue(header.getType(), subpackets), subpackets);
+                packetsForHeader.add(packet); // add parent packet last, to easily access
             }
         }
 
@@ -165,7 +167,34 @@ public class Day16 {
         valueAsString.append(getPacketSection(fourBitBinaryStrings, binaryToParse, 5).substring(1));
         long value = Long.parseLong(valueAsString.toString(), 2);
 
-        return new Packet(header, value);
+        return new Packet(header, value, new ArrayList<>());
+    }
+
+    private static long getPacketValue(int parentType, List<Packet> subpackets) {
+        switch (parentType) {
+            case 0:
+                return subpackets.stream().mapToLong(sp -> sp.getValue()).sum();
+            case 1:
+                return subpackets.stream().mapToLong(sp -> sp.getValue()).reduce(1, (a, b) -> a * b);
+            case 2:
+                return subpackets.stream().mapToLong(sp -> sp.getValue()).min().getAsLong();
+            case 3:
+                return subpackets.stream().mapToLong(sp -> sp.getValue()).max().getAsLong();
+            case 5:
+                return subpackets.get(0).getValue() > subpackets.get(1).getValue()
+                        ? 1
+                        : 0;
+            case 6:
+                return subpackets.get(0).getValue() < subpackets.get(1).getValue()
+                        ? 1
+                        : 0;
+            case 7:
+                return subpackets.get(0).getValue() == subpackets.get(1).getValue()
+                        ? 1
+                        : 0;
+            default:
+                return 0;
+        }
     }
 }
 
@@ -174,10 +203,9 @@ enum LimitType {
 }
 
 class PacketHeader {
-    int version;
-    public int getVersion() { return version; }
+    private int version;
 
-    int type;
+    private int type;
     public int getType() { return type; }
 
     public PacketHeader(int version, int type) {
@@ -187,18 +215,16 @@ class PacketHeader {
 }
 
 class Packet {
-    PacketHeader header;
-    public PacketHeader getHeader() { return header; }
+    private PacketHeader header;
 
-    long value;
+    private long value;
     public long getValue() { return value; }
 
-    public Packet(PacketHeader header) {
-        this.header = header;
-    }
+    private List<Packet> subpackets;
 
-    public Packet(PacketHeader header, long value) {
+    public Packet(PacketHeader header, long value, List<Packet> subpackets) {
         this.header = header;
         this.value = value;
+        this.subpackets = subpackets;
     }
 }
