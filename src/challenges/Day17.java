@@ -18,7 +18,8 @@ public class Day17 {
         TargetArea targetArea = readFile();
 
         Map<Integer, Integer> maxHeights = runStepsUntilIntersect(targetArea);
-        System.out.println(Collections.max(maxHeights.values()));
+        // System.out.println(Collections.max(maxHeights.values()));
+        System.out.println(maxHeights.keySet().size());
     }
 
     private static TargetArea readFile() {
