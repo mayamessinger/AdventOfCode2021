@@ -4,7 +4,10 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class Day18 {
@@ -12,8 +15,11 @@ public class Day18 {
         List<List<String>> snailfishNumbers = readFile();
 
         reduceAllNumbers(snailfishNumbers);
-        List<String> finalSum = addAllNumbers(snailfishNumbers);
-        System.out.println(getMagnitude(finalSum));
+        // List<String> finalSum = addAllNumbers(snailfishNumbers);
+        // System.out.println(getMagnitude(finalSum));
+
+        Map<String, Integer> possibleMagnitudes = getPossibleMagnitudes(snailfishNumbers);
+        System.out.println(Collections.max(possibleMagnitudes.values()));
     }
 
     private static List<List<String>> readFile() {
@@ -180,5 +186,28 @@ public class Day18 {
         }
 
         return -1;
+    }
+
+    private static Map<String, Integer> getPossibleMagnitudes(List<List<String>> smallfishNumbers) {
+        Map<String, Integer> magnitudes = new HashMap<>();
+
+        for (int i = 0; i < smallfishNumbers.size(); i++) {
+            for (int j = 0; j < smallfishNumbers.size(); j++) {
+                if (i == j)
+                    continue;
+
+                List<String> sumOfIJ = new ArrayList<>();
+                sumOfIJ.add(0, "[");
+                sumOfIJ.addAll(smallfishNumbers.get(i));
+                sumOfIJ.add(",");
+                sumOfIJ.addAll(smallfishNumbers.get(j));
+                sumOfIJ.add("]");
+                reduce(sumOfIJ);
+
+                magnitudes.put(i + "+" + j, getMagnitude(sumOfIJ));
+            }
+        }
+
+        return magnitudes;
     }
 }
