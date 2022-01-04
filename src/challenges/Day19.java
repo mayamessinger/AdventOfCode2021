@@ -15,8 +15,9 @@ public class Day19 {
     public static void main(String[] args) {
         Map<Integer, Set<BeaconPosition>> sensorsAndBeacons = readFile();
 
-        Set<BeaconPosition> normalizedBeacons = normalizeBeacons(sensorsAndBeacons);
-        System.out.println(normalizedBeacons.size());
+        NormalizedSensorsAndBeacons normalizedTools = normalizeBeaconsAndSensors(sensorsAndBeacons);
+        // System.out.println(normalizedTools.getNormalizedBeacons().size());
+        System.out.println(getMaxSensorDistance(normalizedTools.getNormalizedSensors()));
     }
 
     private static Map<Integer, Set<BeaconPosition>> readFile() {
@@ -52,19 +53,26 @@ public class Day19 {
         return sensorsAndBeacons;
     }
 
-    private static Set<BeaconPosition> normalizeBeacons(Map<Integer, Set<BeaconPosition>> sensorsAndBeacons) {
+    private static NormalizedSensorsAndBeacons normalizeBeaconsAndSensors(Map<Integer, Set<BeaconPosition>> sensorsAndBeacons) {
         Set<BeaconPosition> normalizedBeaconPositions = sensorsAndBeacons.get(0);
+        Set<BeaconPosition> normalizedSensorPositions = new HashSet<>(Set.of(new BeaconPosition(0, 0, 0)));
         sensorsAndBeacons.remove(0);
 
         // try match more scanners to the normalized set
         while (sensorsAndBeacons.size() > 0) {
-            normalizedBeaconPositions.addAll(normalizeFirstOverlappingSensorBeacons(normalizedBeaconPositions, sensorsAndBeacons));
+            OffsetAndNormalizedBeacons normalization = normalizeFirstOverlappingSensorBeacons(
+                normalizedBeaconPositions, sensorsAndBeacons);
+            normalizedBeaconPositions.addAll(normalization.getNormalizedBeacons());
+
+            Offset sensorNormalization = normalization.getNormalizationOffset();
+            normalizedSensorPositions.add(new BeaconPosition(sensorNormalization.getXOffset(),
+                sensorNormalization.getYOffset(), sensorNormalization.getZOffset()));
         }
 
-        return normalizedBeaconPositions;
+        return new NormalizedSensorsAndBeacons(normalizedBeaconPositions, normalizedSensorPositions);
     }
 
-    private static Set<BeaconPosition> normalizeFirstOverlappingSensorBeacons(Set<BeaconPosition> normalizedBeacons,
+    private static OffsetAndNormalizedBeacons normalizeFirstOverlappingSensorBeacons(Set<BeaconPosition> normalizedBeacons,
         Map<Integer, Set<BeaconPosition>> sensorsAndBeacons
     ) {
         Map<BeaconPosition, Set<Double>> normalizedDistances = getDistancesBetweenBeacons(normalizedBeacons);
@@ -80,7 +88,7 @@ public class Day19 {
             }
         }
 
-        return normalizedBeacons;
+        return new OffsetAndNormalizedBeacons(null, normalizedBeacons);
     }
 
     private static Map<BeaconPosition, Set<Double>> getDistancesBetweenBeacons(Set<BeaconPosition> beacons) {
@@ -110,6 +118,12 @@ public class Day19 {
             + Math.pow(beacon.getY() - otherBeacon.getY(), 2)
             + Math.pow(beacon.getZ() - otherBeacon.getZ(), 2)
         );
+    }
+
+    private static int getManhattanDistanceBetweenBeacons(BeaconPosition beacon, BeaconPosition otherBeacon) {
+        return Math.abs(beacon.getX() - otherBeacon.getX())
+            + Math.abs(beacon.getY() - otherBeacon.getY())
+            + Math.abs(beacon.getZ() - otherBeacon.getZ());
     }
 
     private static CorrespondingOverlap overlappingBeaconDistances(Map<BeaconPosition, Set<Double>> aPositions,
@@ -143,7 +157,7 @@ public class Day19 {
         return new HashSet<>();
     }
 
-    private static Set<BeaconPosition> normalizeBToA(Set<BeaconPosition> aBeacons, Set<BeaconPosition> bBeacons, CorrespondingOverlap overlapSet) {
+    private static OffsetAndNormalizedBeacons normalizeBToA(Set<BeaconPosition> aBeacons, Set<BeaconPosition> bBeacons, CorrespondingOverlap overlapSet) {
         // find aBeacon that has overlap equal to overlapSet's normalized set
         BeaconPosition aBeaconToMatchTo = aBeacons.stream()
             .filter(ab -> getDistancesBetweenBeacons(ab, aBeacons).equals(overlapSet.getNormalizedSet()))
@@ -170,10 +184,27 @@ public class Day19 {
             overlap.retainAll(rotatedBBeaconPositions);
 
             if (overlap.size() >= 12)
-                return rotatedBBeaconPositions;
+                return new OffsetAndNormalizedBeacons(new Offset(r, xChange, yChange, zChange), rotatedBBeaconPositions);
         }
 
-        return new HashSet<>();
+        return new OffsetAndNormalizedBeacons(null, new HashSet<>());
+    }
+
+    private static int getMaxSensorDistance(Set<BeaconPosition> sensorPositions) {
+        int maxDistance = 0;
+
+        for (BeaconPosition sensor : sensorPositions) {
+            for (BeaconPosition otherSensor : sensorPositions) {
+                if (sensor.equals(otherSensor))
+                    continue;;
+
+                int distanceBetweenSensors = getManhattanDistanceBetweenBeacons(sensor, otherSensor);
+                if (distanceBetweenSensors > maxDistance)
+                    maxDistance = distanceBetweenSensors;
+            }
+        }
+
+        return maxDistance;
     }
 }
 
@@ -400,5 +431,48 @@ class CorrespondingOverlap {
     public CorrespondingOverlap(Set<Double> normalizedSet, Set<Double> overlappingDenormalizedSet) {
         this.normalizedSet = normalizedSet;
         this.overlappingDenormalizedSet = overlappingDenormalizedSet;
+    }
+}
+
+class Offset {
+    private Rotation rotationOffset;
+    private int xOffset;
+    int getXOffset() { return xOffset; }
+    private int yOffset;
+    int getYOffset() { return yOffset; }
+    private int zOffset;
+    int getZOffset() { return zOffset; }
+
+    public Offset(Rotation rOffset, int xOffset, int yOffset, int zOffset) {
+        this.rotationOffset = rOffset;
+        this.xOffset = xOffset;
+        this.yOffset = yOffset;
+        this.zOffset = zOffset;
+    }
+}
+
+class OffsetAndNormalizedBeacons {
+    private Offset normalizationOffset;
+    Offset getNormalizationOffset() { return normalizationOffset; }
+
+    private Set<BeaconPosition> normalizedBeacons;
+    Set<BeaconPosition> getNormalizedBeacons() { return normalizedBeacons; }
+
+    public OffsetAndNormalizedBeacons(Offset offset, Set<BeaconPosition> beacons) {
+        this.normalizationOffset = offset;
+        this.normalizedBeacons = beacons;
+    }
+}
+
+class NormalizedSensorsAndBeacons {
+    private Set<BeaconPosition> normalizedBeacons;
+    Set<BeaconPosition> getNormalizedBeacons() { return normalizedBeacons; }
+
+    private Set<BeaconPosition> normalizedSensors;
+    Set<BeaconPosition> getNormalizedSensors() { return normalizedSensors; }
+
+    public NormalizedSensorsAndBeacons(Set<BeaconPosition> beaconPositions, Set<BeaconPosition> sensorPositions) {
+        this.normalizedBeacons = beaconPositions;
+        this.normalizedSensors = sensorPositions;
     }
 }
