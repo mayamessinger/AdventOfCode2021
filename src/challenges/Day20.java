@@ -13,7 +13,7 @@ public class Day20 {
         ImageAndAlgorithm imageAndAlgorithm = readFile();
 
         char[][] outputImage = applyEnhancmentAlgo(imageAndAlgorithm.getEnhancementAlgorithm(),
-            imageAndAlgorithm.getInputImage(), 2);
+            imageAndAlgorithm.getInputImage(), 50, '.');
 
         System.out.println(numLitPixels(outputImage));
     }
@@ -53,15 +53,9 @@ public class Day20 {
         return new ImageAndAlgorithm(enhancementAlgorithm, inputImage);
     }
 
-    private static char[][] applyEnhancmentAlgo(char[] enhancementAlgo, char[][] inputImage, int times) {
+    private static char[][] applyEnhancmentAlgo(char[] enhancementAlgo, char[][] inputImage, int times, char paddingChar) {
         if (times == 0)
             return inputImage;
-
-        char paddingChar = times == 2
-            ? '.'
-            : times % 2 == 0
-                ? enhancementAlgo[511]
-                : enhancementAlgo[0];
 
         char[][] outputImage = createSizedEmptyOutputImage(inputImage);
         char[][] paddedInputImage = paddedImage(inputImage, paddingChar);
@@ -73,7 +67,10 @@ public class Day20 {
             }
         }
 
-        return applyEnhancmentAlgo(enhancementAlgo, outputImage, times - 1);
+        char nextPaddingChar = paddingChar == '#'
+            ? enhancementAlgo[511]
+            : enhancementAlgo[0];
+        return applyEnhancmentAlgo(enhancementAlgo, outputImage, times - 1, nextPaddingChar);
     }
 
     private static char[][] createSizedEmptyOutputImage(char[][] inputImage) {
