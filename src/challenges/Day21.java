@@ -8,6 +8,16 @@ import java.util.regex.Pattern;
 
 public class Day21 {
     public static void main(String[] args) {
+        int scoreToWin = 21;
+
+        BoardState boardState = readFile();
+
+        WinsSpawnedFromUniverse allOutcomes = playWithDiracDie(boardState, scoreToWin);
+        System.out.println(Math.max(allOutcomes.getPlayerOneWins(), allOutcomes.getPlayerTwoWins()));
+    }
+
+/*
+    public static void main(String[] args) {
         int scoreToWin = 1000;
 
         BoardState boardState = readFile();
@@ -16,6 +26,7 @@ public class Day21 {
 
         System.out.println(partOneAnswer(boardState, scoreToWin));
     }
+*/
 
     private static BoardState readFile() {
         int p1Pos = 0;
@@ -42,13 +53,13 @@ public class Day21 {
 
     private static void playWithDeterministicDie(BoardState boardState, int scoreToWin) {
         while (true) {
-            DieRoll playerOneRoll = new DieRoll(boardState.getTurnNumber(), 1);
+            DeterministicDieRoll playerOneRoll = new DeterministicDieRoll(boardState.getTurnNumber(), 1);
             int p1TurnScore = boardState.movePlayerOne(playerOneRoll);
             boardState.addToPlayerOneScore(p1TurnScore);
             if (winnerId(boardState, scoreToWin) != null)
                 break;
 
-            DieRoll playerTwoRoll = new DieRoll(boardState.getTurnNumber(), 2);
+            DeterministicDieRoll playerTwoRoll = new DeterministicDieRoll(boardState.getTurnNumber(), 2);
             int p2TurnScore = boardState.movePlayerTwo(playerTwoRoll);
             boardState.addToPlayerTwoScore(p2TurnScore);
             if (winnerId(boardState, scoreToWin) != null)
@@ -56,6 +67,42 @@ public class Day21 {
 
             boardState.increaseTurnNumber();
         }
+    }
+
+    private static WinsSpawnedFromUniverse playWithDiracDie(BoardState boardState, int scoreToWin) {
+        return playWithDiracDie(boardState, scoreToWin, 1);
+    }
+
+    private static WinsSpawnedFromUniverse playWithDiracDie(BoardState boardState, int scoreToWin, int playerToMove) {
+        Integer winnerId = winnerId(boardState, scoreToWin);
+        if (winnerId != null) {
+            if (winnerId == 1)
+                return new WinsSpawnedFromUniverse(1, 0);
+
+            return new WinsSpawnedFromUniverse(0, 1);
+        }
+
+        long p1Wins = 0;
+        long p2Wins = 0;
+        for (int i = 3; i <= 9; i++) {
+            BoardState rollStartBoardState = new BoardState(boardState);
+
+            if (playerToMove == 1) {
+                int p1TurnScore = rollStartBoardState.movePlayerOne(i);
+                rollStartBoardState.addToPlayerOneScore(p1TurnScore);
+            }
+            else {
+                int p2TurnScore = rollStartBoardState.movePlayerTwo(i);
+                rollStartBoardState.addToPlayerTwoScore(p2TurnScore);
+                rollStartBoardState.increaseTurnNumber();
+            }
+
+            WinsSpawnedFromUniverse moveResults = playWithDiracDie(new BoardState(rollStartBoardState), scoreToWin, playerToMove == 1 ? 2 : 1);
+            p1Wins += moveResults.getPlayerOneWins() * getUniverseCountFromMovement(i);
+            p2Wins += moveResults.getPlayerTwoWins() * getUniverseCountFromMovement(i);
+        }
+
+        return new WinsSpawnedFromUniverse(p1Wins, p2Wins);
     }
 
     private static Integer winnerId(BoardState boardState, int scoreToWin) {
@@ -79,12 +126,34 @@ public class Day21 {
         dieRolls += 6;
         return dieRolls * boardState.getPlayerOneScore();
     }
+
+    private static int getUniverseCountFromMovement(int movement) {
+        switch (movement) {
+            case 3:
+            case 9:
+                return 1;
+            case 4:
+            case 8:
+                return 3;
+            case 5:
+            case 7:
+                return 6;
+            case 6:
+                return 7;
+            default:
+                return 0;
+        }
+    }
 }
 
 class BoardState {
     private int playerOnePosition;
-    int movePlayerOne(DieRoll roll) {
+    int movePlayerOne(DeterministicDieRoll roll) {
         playerOnePosition = move(playerOnePosition, roll.sumOfRolls());
+        return playerOnePosition;
+    }
+    int movePlayerOne(int roll) {
+        playerOnePosition = move(playerOnePosition, roll);
         return playerOnePosition;
     }
 
@@ -93,8 +162,12 @@ class BoardState {
     void addToPlayerOneScore(int points) { this.playerOneScore += points; }
 
     private int playerTwoPosition;
-    int movePlayerTwo(DieRoll roll) {
+    int movePlayerTwo(DeterministicDieRoll roll) {
         playerTwoPosition = move(playerTwoPosition, roll.sumOfRolls());
+        return playerTwoPosition;
+    }
+    int movePlayerTwo(int roll) {
+        playerTwoPosition = move(playerTwoPosition, roll);
         return playerTwoPosition;
     }
 
@@ -118,9 +191,17 @@ class BoardState {
         this.playerOneScore = 0;
         this.playerTwoScore = 0;
     }
+
+    public BoardState(BoardState toCopy) {
+        this.playerOnePosition = toCopy.movePlayerOne(0);
+        this.playerTwoPosition = toCopy.movePlayerTwo(0);
+        this.playerOneScore = toCopy.getPlayerOneScore();
+        this.playerTwoScore = toCopy.getPlayerTwoScore();
+        this.turnNumber = toCopy.getTurnNumber();
+    }
 }
 
-class DieRoll {
+class DeterministicDieRoll {
     private int rollOne;
     int getRollOne() { return rollOne; }
 
@@ -132,7 +213,7 @@ class DieRoll {
 
     int sumOfRolls() { return rollOne + rollTwo + rollThree; }
 
-    public DieRoll(int turnNumber, int playerToRoll) {
+    public DeterministicDieRoll(int turnNumber, int playerToRoll) {
         if (playerToRoll == 1)
             rollOne = (turnNumber * 6 + 1) % 100;
         if (playerToRoll == 2)
@@ -140,5 +221,18 @@ class DieRoll {
 
         rollTwo = rollOne + 1;
         rollThree = rollOne + 2;
+    }
+}
+
+class WinsSpawnedFromUniverse {
+    private long playerOneWins;
+    long getPlayerOneWins() { return playerOneWins; }
+
+    private long playerTwoWins;
+    long getPlayerTwoWins() { return playerTwoWins; }
+
+    public WinsSpawnedFromUniverse(long p1Wins, long p2Wins) {
+        this.playerOneWins = p1Wins;
+        this.playerTwoWins = p2Wins;
     }
 }
